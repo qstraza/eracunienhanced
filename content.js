@@ -4,6 +4,25 @@
  */
 
 $( document ).ready(function() {
+  // More rows are inserted via Ajax.
+  $("body").on("DOMNodeInserted", "#vTContainer table", function(el){
+    if ($("select[name=skladisce]").length == 1 && $("input#articleId").length == 1) {
+      addCopyButton();
+    }
+  });
+  // We suppose to be on inventory list page
+  if ($("select[name=skladisce]").length == 1 && $("input#articleId").length == 1) {
+    addCopyButton();
+  }
+  $("body").on("click", ".copyCodeNumber", function(e){
+    e.preventDefault();
+    var code = $(e.target).parent().find("a").text();
+    var $temp = $("<input>");
+    $("body").append($temp);
+    $temp.val(code).select();
+    document.execCommand("copy");
+    $temp.remove();
+  });
   $("body").on("DOMNodeInserted", ".DialogBox .DialogBoxContent", function(el){
     // Checking if hidden input field exists which determens popup is a Serial
     // number popup.
@@ -168,4 +187,18 @@ function getNonUniqueElements(arr) {
     }
   }
   return results.length ? results : false;
+}
+
+/**
+ * Goes thru the rows in the table and adds a C button which has an event
+ * binded on it which copies item code to clipboard.
+ */
+function addCopyButton() {
+  $(".vTScrollableInnerTable tr").each(function(index){
+    var $tds = $(this).find("td");
+    var $div = $tds.first().find("div");
+    if ($tds.length > 1 && index > 0 && !$div.find("button").length) {
+      $div.prepend('<button class="copyCodeNumber">C</button>')
+    }
+  });
 }

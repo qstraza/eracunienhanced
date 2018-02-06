@@ -20,3 +20,7 @@
 #serialParserHelp .serialParserHelpTitle {
   cursor: pointer;
 }
+
+.copyCodeNumber {
+  margin-right: 5px;
+}
