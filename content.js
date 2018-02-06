@@ -2,6 +2,7 @@
  * Author: Rok Avbar, qstraza, rok@rojal.si
  * Date: 19.1.2018
  */
+
 $( document ).ready(function() {
   // More rows are inserted via Ajax.
   $("body").on("DOMNodeInserted", "#vTContainer table", function(el){
