@@ -1,0 +1,21 @@
+{
+  "name": "eracunienhanced",
+  "version": "1.0.0",
+  "description": "E-racuni.com extension to enhance the web application.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/qstraza/eracunienhanced.git"
+  },
+  "author": "qstraza",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/qstraza/eracunienhanced/issues"
+  },
+  "homepage": "https://github.com/qstraza/eracunienhanced#readme",
+  "devDependencies": {
+    "chrome-webstore-upload-cli": "^1.0.0"
+  },
+  "scripts": {
+    "release": "webstore upload --source=./ --auto-publish"
+  }
+}
