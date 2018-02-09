@@ -4,6 +4,17 @@
  */
 
 $( document ).ready(function() {
+  // Checking if we are on item edit page.
+  if ($("input[name=sifraArtikla]").length == 1 && $("input[name=genNewCode]").length == 1) {
+    // Adding ean generator button.
+    $("input[name=crtnaKoda]").closest("td").append('<button class="ean13Generator">Generate</button>');
+  }
+  $(".ean13Generator").click(function(e){
+    e.preventDefault();
+    var ean = Math.floor(Math.random() * (999999999999 - 100000000000 + 1) ) + 100000000000;
+    ean = "" + ean + ean13CheckSum(ean);
+    $("input[name=crtnaKoda]").val(ean);
+  });
   // More rows are inserted via Ajax.
   $("body").on("DOMNodeInserted", "#vTContainer table", function(el){
     if ($("select[name=skladisce]").length == 1 && $("input#articleId").length == 1) {
@@ -201,4 +212,19 @@ function addCopyButton() {
       $div.prepend('<button class="copyCodeNumber">C</button>')
     }
   });
+}
+/**
+ * Calculates checksum digit for EAN-13.
+ *
+ * @param  {String|Integer} s Input number (12 digit) for which checksum is
+ * calculated
+ * @return {Integer}   returns checksum digit.
+ */
+function ean13CheckSum(s){
+  var result = 0;
+  s = s.toString();
+  for (counter = s.length-1; counter >=0; counter--){
+    result = result + parseInt(s.charAt(counter)) * (1+(2*(counter % 2)));
+  }
+  return (10 - (result % 10)) % 10;
 }
