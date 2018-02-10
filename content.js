@@ -5,13 +5,20 @@
 
 $( document ).ready(function() {
   // Checking if we are on item edit page.
-  if ($("input[name=sifraArtikla]").length == 1 && $("input[name=genNewCode]").length == 1) {
+  if ($("input[name=sifraArtikla]").length && $("input[name=genNewCode]").length && $("input[name=crtnaKoda]").length == 1) {
     // Adding ean generator button.
-    $("input[name=crtnaKoda]").closest("td").append('<button class="ean13Generator">Generate</button>');
+    createBarCodeButton($("input[name=crtnaKoda]").closest("td"));
   }
-  $(".ean13Generator").click(function(e){
+  // Checking if user clicked on create new item.
+  $("body").on("DOMNodeInserted", ".DialogBox", function(el){
+    if ($("input[name=sifraArtikla]", el.target).length && $("input[name=genNewCode]", el.target).length && $("input[name=crtnaKoda]", el.target).length == 1) {
+      createBarCodeButton($("input[name=crtnaKoda]", el.target).closest("td"));
+    }
+  });
+  $("body").on("click", ".ean13Generator", function(e){
     e.preventDefault();
-    var ean = Math.floor(Math.random() * (999999999999 - 100000000000 + 1) ) + 100000000000;
+    var prefix = Math.floor(Math.random() * (29 - 20 + 1) ) + 20;
+    var ean = "" + prefix + (Math.floor(Math.random() * (9999999999 - 1000000000 + 1) ) + 1000000000);
     ean = "" + ean + ean13CheckSum(ean);
     $("input[name=crtnaKoda]").val(ean);
   });
@@ -228,3 +235,13 @@ function ean13CheckSum(s){
   }
   return (10 - (result % 10)) % 10;
 }
+
+/**
+ * Creates button for barcode generation on provided element.
+ *
+ * @param  {jQuery element} element Element on which button will be appended.
+ */
+function createBarCodeButton(element) {
+  element.append('<button class="ean13Generator">Generate</button>');
+}
+
