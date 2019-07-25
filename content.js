@@ -72,12 +72,12 @@ $( document ).ready(function() {
     }
   });
   // Listener when user clicks a Go button to parse the serials.
-  $("body").on('click', ".DialogBox .DialogBoxContent button[name=go]", function(event){
+  $("body").on('click', ".DialogBox .DialogBoxContent div#serialParserWrapper button[name=go]", function(event){
     event.preventDefault();
     fillSerials($('textarea', $(event.target).parents('#serialParserWrapper')).val(), $(event.target).closest('form'));
   });
   // Listener when user pastes text in to textarea.
-  $("body").on('paste', ".DialogBox .DialogBoxContent textarea", function(event){
+  $("body").on('paste', ".DialogBox .DialogBoxContent div#serialParserWrapper textarea", function(event){
     fillSerials(event.originalEvent.clipboardData.getData('text'), $(event.target).closest('form'));
   });
   // Listener when user clicks to clear all current serial numbers entered.
@@ -214,7 +214,7 @@ function getNonUniqueElements(arr) {
 function addCopyButton() {
   $(".vTScrollableInnerTable tr").each(function(index){
     var $tds = $(this).find("td");
-    var $div = $tds.first().find("div");
+    var $div = $tds.first().find("div").first();
     if ($tds.length > 1 && index > 0 && !$div.find("button").length) {
       $div.prepend('<button class="copyCodeNumber">C</button>')
     }
