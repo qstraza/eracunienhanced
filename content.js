@@ -224,7 +224,7 @@ function addCopyButton() {
  * Calculates checksum digit for EAN-13.
  *
  * @param  {String|Integer} s Input number (12 digit) for which checksum is
- * calculated
+ * calculated.
  * @return {Integer}   returns checksum digit.
  */
 function ean13CheckSum(s){
