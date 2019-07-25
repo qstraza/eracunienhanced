@@ -208,7 +208,7 @@ function getNonUniqueElements(arr) {
 }
 
 /**
- * Goes thru the rows in the table and adds a C button which has an event
+ * Goes through the rows in the table and adds a C button which has an event
  * binded on it which copies item code to clipboard.
  */
 function addCopyButton() {
