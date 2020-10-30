@@ -4,6 +4,7 @@
  */
 
 $( document ).ready(function() {
+  var mainIframe = $("#mainContentFrame");
   // Checking if we are on item edit page.
   if ($("input[name=sifraArtikla]").length && $("input[name=genNewCode]").length && $("input[name=crtnaKoda]").length == 1) {
     // Adding ean generator button.
@@ -85,6 +86,26 @@ $( document ).ready(function() {
     event.preventDefault();
     $('table input[type=text]', $(event.target).closest("form")).val('');
   });
+
+
+
+  // mainIframe.on('load', function() {
+  //   // iframe content
+  //   var iframeContents = $(this).contents();
+  //   // We are on item/product display page.
+  //   if ($("#toolbarTitle", iframeContents).length && $("#toolbarTitle", iframeContents).text().substr(0,8) == "Artikel:") {
+  //     if ($("#__ItcTopEnclosingContentContainer__ > form > table:nth-child(3) > tbody > tr:nth-child(1) > td:nth-child(2)", iframeContents).length){
+  //       var product_code = $("#__ItcTopEnclosingContentContainer__ > form > table:nth-child(3) > tbody > tr:nth-child(1) > td:nth-child(2)", iframeContents).text();
+  //       addProductInfoFromWeb(product_code);
+  //     }
+  //   }
+  // })
+  if ($("#toolbarTitle").length && $("#toolbarTitle").text().substr(0,8) == "Artikel:") {
+    if ($("#__ItcTopEnclosingContentContainer__ > form > table:nth-child(3) > tbody > tr:nth-child(1) > td:nth-child(2)").length){
+      var product_code = $("#__ItcTopEnclosingContentContainer__ > form > table:nth-child(3) > tbody > tr:nth-child(1) > td:nth-child(2)").text();
+      addProductInfoFromWeb(product_code);
+    }
+  }
 });
 
 /**
@@ -216,7 +237,8 @@ function addCopyButton() {
     var $tds = $(this).find("td");
     var $div = $tds.first().find("div").first();
     if ($tds.length > 1 && index > 0 && !$div.find("button").length) {
-      $div.prepend('<button class="copyCodeNumber">C</button>')
+      $div.prepend('<button class="copyCodeNumber">C</button>');
+      $("div.cell-wrapper",$div).css("display", "inline");
     }
   });
 }
@@ -245,3 +267,44 @@ function createBarCodeButton(element) {
   element.append('<button class="ean13Generator">Generate</button>');
 }
 
+function addProductInfoFromWeb(product_code) {
+  chrome.storage.sync.get('apiurl', function(data) {
+    $.get(data.apiurl + product_code, function(data){
+      if (data) {
+        var productInfoContainer;
+        productInfoContainer = productInfoContainerTemplate.replace(/%URL%/, data.link.details);
+        productInfoContainer = productInfoContainer.replace(/%ID%/, data.item_id);
+        productInfoContainer = productInfoContainer.replace(/%TITLE%/, data.item_name);
+        productInfoContainer = productInfoContainer.replace(/%PRICE%/, data.price.default.your.price_format);
+        productInfoContainer = productInfoContainer.replace(/%IMG%/, data.images[0].name);
+        if ($("#itemWebWrapper").length) {
+          $("#itemWebWrapper").remove();
+        }
+        $("body").append(productInfoContainer);
+        if (data.item_published) {
+          $("#itemWebWrapper input[name='item_published']").prop("checked", true);
+        }
+        if (data.item_stock) {
+          $("#itemWebWrapper input[name='item_onstock']").prop("checked", true);
+        }
+      }
+      else {
+        $("body").append("<div id='itemWebWrapper'><h2>Rojal.si Info</h2><div class='content'><h4>Izdelka s to šifro ni na spletni strani.</h4></div></div>");
+      }
+    });
+  });
+}
+
+var productInfoContainerTemplate = "\
+<div id='itemWebWrapper'> \
+  <h2>Rojal.si Info</h2> \
+  <div class='content'> \
+    <h4><a target='_blank' href='%URL%'>%TITLE%</a></h4> \
+    <div><a target='_blank' href='https://www.rojal.si/admin/?group=items&section=edit&id=%ID%'>Edit</a></div> \
+    <div><span>Price: %PRICE%</span></div> \
+    <div><span>Published: </span><span><input type='checkbox' name='item_published' disabled='disabled'></span></div> \
+    <div><span>In Stock: </span><span><input type='checkbox' name='item_onstock' disabled='disabled'></span></div> \
+    <img src='https://www.rojal.si/images/products/260x200/%IMG%' /> \
+  </div> \
+</div> \
+";

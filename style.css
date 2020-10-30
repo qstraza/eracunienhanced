@@ -24,3 +24,15 @@
 .copyCodeNumber {
   margin-right: 5px;
 }
+
+#itemWebWrapper {
+  position: absolute;
+  width: 300px;
+  top: 54px;
+  left: 600px;
+  height: 300px;
+}
+#itemWebWrapper h4 {
+  margin: 0;
+}
+
