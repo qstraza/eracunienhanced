@@ -281,10 +281,10 @@ function addProductInfoFromWeb(product_code) {
           $("#itemWebWrapper").remove();
         }
         $("body").append(productInfoContainer);
-        if (data.item_published) {
+        if (data.item_published == "1") {
           $("#itemWebWrapper input[name='item_published']").prop("checked", true);
         }
-        if (data.item_stock) {
+        if (data.item_stock == "1") {
           $("#itemWebWrapper input[name='item_onstock']").prop("checked", true);
         }
       }
