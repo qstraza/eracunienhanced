@@ -16,7 +16,6 @@
             ],
             "js": [
                 "jquery-1.8.0.js",
-                "jquery.xmlrpc.js",
                 "content.js"
             ],
             "css": ["style.css"],
