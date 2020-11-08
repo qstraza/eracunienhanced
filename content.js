@@ -2,7 +2,7 @@
  * Author: Rok Avbar, qstraza, rok@rojal.si
  * Date: 19.1.2018
  */
-
+ var proxyurl;
 $( document ).ready(function() {
   var mainIframe = $("#mainContentFrame");
   // Checking if we are on item edit page.
@@ -32,7 +32,34 @@ $( document ).ready(function() {
   // We suppose to be on inventory list page
   if ($("select[name=skladisce]").length == 1 && $("input#articleId").length == 1) {
     addCopyButton();
+    $("#vT_page1 table > tbody > tr > td:nth-child(4)").click(function(el){
+      var closestTd = $(this).closest("td");
+      closestTd.addClass("pointer");
+      var stockPopupElement = $(".stockPopup", closestTd);
+      $(".stockPopup").hide();
+      if (stockPopupElement.length) {
+        stockPopupElement.show();
+      }
+      else{
+        var product_code = $("tr > td:nth-child(1) > div > div > a", $(this).closest("table")).text();
+        chrome.storage.sync.get('proxyurl', function(data) {
+          proxyurl = data.proxyurl;
+          getItemStock(product_code)
+            .then((stock) => {
+              var html = createStockSnippet(stock);
+              closestTd.append(html);
+              $(".stockPopup", closestTd).show();
+            })
+            .catch((error) => {
+              console.log(error)
+            })
+        });
+      }
+    })
   }
+  $("body").on("click", ".stockPopup", function(e){
+    $(this).hide();
+  });
   $("body").on("click", ".copyCodeNumber", function(e){
     e.preventDefault();
     var code = $(e.target).parent().find("a").text();
@@ -104,6 +131,20 @@ $( document ).ready(function() {
     if ($("#__ItcTopEnclosingContentContainer__ > form > table:nth-child(3) > tbody > tr:nth-child(1) > td:nth-child(2)").length){
       var product_code = $("#__ItcTopEnclosingContentContainer__ > form > table:nth-child(3) > tbody > tr:nth-child(1) > td:nth-child(2)").text();
       addProductInfoFromWeb(product_code);
+      chrome.storage.sync.get('proxyurl', function(data) {
+        proxyurl = data.proxyurl;
+        getItemStock(product_code)
+          .then((stock) => {
+            var addhtml = '<tr><td align="right"><b><font class="dgLb">Zaloga po sladiščih</font></b></td><td></td></tr>';
+            for (var warehouse in stock) {
+              addhtml += '<tr><td align="right"><font class="dgLb">' + warehouse + ':</font></td><td>' + stock[warehouse] + '</td></tr>';
+            }
+            $("#__ItcTopEnclosingContentContainer__ > form > table:nth-child(3) > tbody > tr:nth-child(13)").after(addhtml);
+          })
+          .catch((error) => {
+            console.log(error)
+          })
+      })
     }
   }
 });
@@ -295,6 +336,25 @@ function addProductInfoFromWeb(product_code) {
   });
 }
 
+function getItemStock(product_code){
+  return new Promise((resolve, reject) => {
+    $.ajax({
+      type: 'POST',
+      url: proxyurl,
+      data: {
+        productCodes: [product_code],
+        methodName: 'getArticleStock'
+      },
+      success: function(data){
+        resolve(JSON.parse(data));
+      },
+      error: function(error){
+        reject(error);
+      }
+    })
+  })
+}
+
 var productInfoContainerTemplate = "\
 <div id='itemWebWrapper'> \
   <h2>Rojal.si Info</h2> \
@@ -308,3 +368,12 @@ var productInfoContainerTemplate = "\
   </div> \
 </div> \
 ";
+
+function createStockSnippet(stock) {
+  var html = "<span class='stockPopup'><table>";
+  for (var warehouse in stock) {
+    html += '<tr><td align="right"><font class="dgLb">' + warehouse + ':</font></td><td><font class="dgLb">' + stock[warehouse] + '</font></td></tr>';
+  }
+  html+= "</table></span>";
+  return html;
+}
