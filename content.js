@@ -5,15 +5,10 @@
  var proxyurl;
 $( document ).ready(function() {
   var mainIframe = $("#mainContentFrame");
-  // Checking if we are on item edit page.
-  if ($("input[name=sifraArtikla]").length && $("input[name=genNewCode]").length && $("input[name=crtnaKoda]").length == 1) {
-    // Adding ean generator button.
-    createBarCodeButton($("input[name=crtnaKoda]").closest("td"));
-  }
-  // Checking if user clicked on create new item.
-  $("body").on("DOMNodeInserted", ".DialogBox", function(el){
-    if ($("input[name=sifraArtikla]", el.target).length && $("input[name=genNewCode]", el.target).length && $("input[name=crtnaKoda]", el.target).length == 1) {
-      createBarCodeButton($("input[name=crtnaKoda]", el.target).closest("td"));
+  // Checking if user clicked on create/edit item.
+  $("body").on("DOMNodeInserted", "#articleCreate", function(el){
+    if ($("input[name=sifraArtikla]", el.target).length && $("input[name=crtnaKoda]", el.target).length == 1) {
+      createBarCodeButton($("#barcodeType", el.target));
     }
   });
   $("body").on("click", ".ean13Generator", function(e){
@@ -32,34 +27,7 @@ $( document ).ready(function() {
   // We suppose to be on inventory list page
   if ($("select[name=skladisce]").length == 1 && $("input#articleId").length == 1) {
     addCopyButton();
-    $("#vT_page1 table > tbody > tr > td:nth-child(4)").click(function(el){
-      var closestTd = $(this).closest("td");
-      closestTd.addClass("pointer");
-      var stockPopupElement = $(".stockPopup", closestTd);
-      $(".stockPopup").hide();
-      if (stockPopupElement.length) {
-        stockPopupElement.show();
-      }
-      else{
-        var product_code = $("tr > td:nth-child(1) > div > div > a", $(this).closest("table")).text();
-        chrome.storage.sync.get('proxyurl', function(data) {
-          proxyurl = data.proxyurl;
-          getItemStock(product_code)
-            .then((stock) => {
-              var html = createStockSnippet(stock);
-              closestTd.append(html);
-              $(".stockPopup", closestTd).show();
-            })
-            .catch((error) => {
-              console.log(error)
-            })
-        });
-      }
-    })
   }
-  $("body").on("click", ".stockPopup", function(e){
-    $(this).hide();
-  });
   $("body").on("click", ".copyCodeNumber", function(e){
     e.preventDefault();
     var code = $(e.target).parent().find("a").text();
@@ -114,38 +82,11 @@ $( document ).ready(function() {
     $('table input[type=text]', $(event.target).closest("form")).val('');
   });
 
-
-
-  // mainIframe.on('load', function() {
-  //   // iframe content
-  //   var iframeContents = $(this).contents();
-  //   // We are on item/product display page.
-  //   if ($("#toolbarTitle", iframeContents).length && $("#toolbarTitle", iframeContents).text().substr(0,8) == "Artikel:") {
-  //     if ($("#__ItcTopEnclosingContentContainer__ > form > table:nth-child(3) > tbody > tr:nth-child(1) > td:nth-child(2)", iframeContents).length){
-  //       var product_code = $("#__ItcTopEnclosingContentContainer__ > form > table:nth-child(3) > tbody > tr:nth-child(1) > td:nth-child(2)", iframeContents).text();
-  //       addProductInfoFromWeb(product_code);
-  //     }
-  //   }
-  // })
-  if ($("#toolbarTitle").length && $("#toolbarTitle").text().substr(0,8) == "Artikel:") {
-    if ($("#__ItcTopEnclosingContentContainer__ > form > table:nth-child(3) > tbody > tr:nth-child(1) > td:nth-child(2)").length){
-      var product_code = $("#__ItcTopEnclosingContentContainer__ > form > table:nth-child(3) > tbody > tr:nth-child(1) > td:nth-child(2)").text();
-      addProductInfoFromWeb(product_code);
-      chrome.storage.sync.get('proxyurl', function(data) {
-        proxyurl = data.proxyurl;
-        getItemStock(product_code)
-          .then((stock) => {
-            var addhtml = '<tr><td align="right"><b><font class="dgLb">Zaloga po sladiščih</font></b></td><td></td></tr>';
-            for (var warehouse in stock) {
-              addhtml += '<tr><td align="right"><font class="dgLb">' + warehouse + ':</font></td><td>' + stock[warehouse] + '</td></tr>';
-            }
-            $("#__ItcTopEnclosingContentContainer__ > form > table:nth-child(3) > tbody > tr:nth-child(13)").after(addhtml);
-          })
-          .catch((error) => {
-            console.log(error)
-          })
-      })
-    }
+  if ($("#main-content #header-text span").length && $("#main-content #header-text span").first().text() == "Šifra artikla") {
+    product_code_span = $("#main-content #header-text span").next();
+    var product_code = product_code_span.text();
+    addProductInfoFromWeb(product_code);
+    product_code_span.html('<input type="text" value="' + product_code + '" readonly/>');
   }
 });
 
@@ -305,10 +246,11 @@ function ean13CheckSum(s){
  * @param  {jQuery element} element Element on which button will be appended.
  */
 function createBarCodeButton(element) {
-  element.append('<button class="ean13Generator">Generate</button>');
+  element.html('<a href="javascript:;" class="ean13Generator">' + element.text() + '</a>')
 }
 
 function addProductInfoFromWeb(product_code) {
+  homeElement = $("#sidebar div.header > a");
   chrome.storage.sync.get('apiurl', function(data) {
     $.get(data.apiurl + product_code, function(data){
       if (data) {
@@ -321,7 +263,9 @@ function addProductInfoFromWeb(product_code) {
         if ($("#itemWebWrapper").length) {
           $("#itemWebWrapper").remove();
         }
-        $("body").append(productInfoContainer);
+
+        $("#sidebar div.header").html(productInfoContainer);
+        $("#sidebar div.header").append(homeElement);
         if (data.item_published == "1") {
           $("#itemWebWrapper input[name='item_published']").prop("checked", true);
         }
@@ -330,7 +274,8 @@ function addProductInfoFromWeb(product_code) {
         }
       }
       else {
-        $("body").append("<div id='itemWebWrapper'><h2>Rojal.si Info</h2><div class='content'><h4>Izdelka s to šifro ni na spletni strani.</h4></div></div>");
+        $("#sidebar div.header").html("<div id='itemWebWrapper'><h2>Rojal.si Info</h2><div class='content'><h4>Izdelka s to šifro ni na spletni strani.</h4></div></div>");
+        $("#sidebar div.header").append(homeElement);
       }
     });
   });
@@ -368,12 +313,3 @@ var productInfoContainerTemplate = "\
   </div> \
 </div> \
 ";
-
-function createStockSnippet(stock) {
-  var html = "<span class='stockPopup'><table>";
-  for (var warehouse in stock) {
-    html += '<tr><td align="right"><font class="dgLb">' + warehouse + ':</font></td><td><font class="dgLb">' + stock[warehouse] + '</font></td></tr>';
-  }
-  html+= "</table></span>";
-  return html;
-}
