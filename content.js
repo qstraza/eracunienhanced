@@ -11,7 +11,8 @@ $( document ).ready(function() {
       createBarCodeButton($("#barcodeType", el.target));
     }
   });
-  $("body").on("click", ".ean13Generator", function(e){
+  // $("body").on("click", ".ean13Generator", function(e){
+  $("body").on("click", "div.form-row > div:nth-child(3) > div > font", function(e){
     e.preventDefault();
     var prefix = Math.floor(Math.random() * (29 - 20 + 1) ) + 20;
     var ean = "" + prefix + (Math.floor(Math.random() * (9999999999 - 1000000000 + 1) ) + 1000000000);
@@ -22,6 +23,7 @@ $( document ).ready(function() {
   $("body").on("DOMNodeInserted", "#vTContainer table", function(el){
     if ($("select[name=skladisce]").length == 1 && $("input#articleId").length == 1) {
       addCopyButton();
+      checkIfOnWebPage(getAllCodes());
     }
   });
   // We suppose to be on inventory list page
@@ -88,6 +90,48 @@ $( document ).ready(function() {
     addProductInfoFromWeb(product_code);
     product_code_span.html('<input type="text" value="' + product_code + '" readonly/>');
   }
+
+  /**
+   * When modal for creating new Product is opened, this code automatically sets
+   * shop visibility to "visible online", so all newly created items will have this
+   * option seleted.
+   */
+  // Create a new MutationObserver instance
+  const observer = new MutationObserver((mutationsList) => {
+    // Check each mutation for added nodes
+    for (const mutation of mutationsList) {
+      if (mutation.type === 'childList') {
+        // Check if any added node matches the target ID
+        const addedNodes = Array.from(mutation.addedNodes);
+        const targetNode = addedNodes.find((node) => node.id === 'articleCreate');
+        // If the target node is found, execute your code here
+        if (targetNode) {
+          if (!$("#articleCreate input[name=sifraArtikla]").val()) {
+            // Select "visible online".
+            $("#onlineShopVisibility_div select").val("visibleOnline");
+            // Izberi "kos" kot enoto.
+            $("#articleCreate input[name=enotaMereString]").val("kos");
+            $("#articleCreate input[name=enotaMere]").val(2);
+          }
+          // Forces the SKU to only allows letters, numbers and "- / _ #"
+          $("#articleCreate input[name=sifraArtikla]").on("input", function() {
+            // Get the current value of the input
+            var inputValue = $(this).val();
+        
+            // Remove any characters that are not allowed
+            var updatedValue = inputValue.replace(/[^A-Za-z0-9\-/_#]/g, '');
+        
+            // Update the input with the cleaned value
+            $(this).val(updatedValue);
+          });
+        }
+      }
+    }
+  });
+
+  // Start observing the body element for changes
+  observer.observe(document.body, { childList: true, subtree: true });
+
 });
 
 /**
@@ -224,6 +268,24 @@ function addCopyButton() {
     }
   });
 }
+
+function checkIfOnWebPage($codes) {
+
+}
+
+function getAllCodes() {
+  var codes = [];
+  $(".vTScrollableInnerTable tr").each(function(index){
+    var $tds = $(this).find("td");
+    var $div = $tds.first().find("div").first();
+    var code = $("a",$div).text();
+    if (code.length > 2) {
+      codes.push(code);
+    }
+  });
+  return codes;
+}
+
 /**
  * Calculates checksum digit for EAN-13.
  *
