@@ -3,135 +3,142 @@
  * Date: 19.1.2018
  */
  var proxyurl;
+ var companies = [
+  'ROJAL NOVO MESTO, d.o.o.',
+  'RTI ARMS, proizvodnja in trgovina, d.o.o.'
+ ];
+ 
 $( document ).ready(function() {
-  var mainIframe = $("#mainContentFrame");
-  // Checking if user clicked on create/edit item.
-  $("body").on("DOMNodeInserted", "#articleCreate", function(el){
-    if ($("input[name=sifraArtikla]", el.target).length && $("input[name=crtnaKoda]", el.target).length == 1) {
-      createBarCodeButton($("#barcodeType", el.target));
-    }
-  });
-  // $("body").on("click", ".ean13Generator", function(e){
-  $("body").on("click", "div.form-row > div:nth-child(3) > div > font", function(e){
-    e.preventDefault();
-    var prefix = Math.floor(Math.random() * (29 - 20 + 1) ) + 20;
-    var ean = "" + prefix + (Math.floor(Math.random() * (9999999999 - 1000000000 + 1) ) + 1000000000);
-    ean = "" + ean + ean13CheckSum(ean);
-    $("input[name=crtnaKoda]").val(ean);
-  });
-  // More rows are inserted via Ajax.
-  $("body").on("DOMNodeInserted", "#vTContainer table", function(el){
+  var currentCompany = $("#currentMandant", top.document).text();
+  if (companies.includes(currentCompany)) {
+    var mainIframe = $("#mainContentFrame");
+    // Checking if user clicked on create/edit item.
+    $("body").on("DOMNodeInserted", "#articleCreate", function(el){
+      if ($("input[name=sifraArtikla]", el.target).length && $("input[name=crtnaKoda]", el.target).length == 1) {
+        createBarCodeButton($("#barcodeType", el.target));
+      }
+    });
+    // $("body").on("click", ".ean13Generator", function(e){
+    $("body").on("click", "div.form-row > div:nth-child(3) > div > font", function(e){
+      e.preventDefault();
+      var prefix = Math.floor(Math.random() * (29 - 20 + 1) ) + 20;
+      var ean = "" + prefix + (Math.floor(Math.random() * (9999999999 - 1000000000 + 1) ) + 1000000000);
+      ean = "" + ean + ean13CheckSum(ean);
+      $("input[name=crtnaKoda]").val(ean);
+    });
+    // More rows are inserted via Ajax.
+    $("body").on("DOMNodeInserted", "#vTContainer table", function(el){
+      if ($("select[name=skladisce]").length == 1 && $("input#articleId").length == 1) {
+        addCopyButton();
+        checkIfOnWebPage(getAllCodes());
+      }
+    });
+    // We suppose to be on inventory list page
     if ($("select[name=skladisce]").length == 1 && $("input#articleId").length == 1) {
       addCopyButton();
-      checkIfOnWebPage(getAllCodes());
     }
-  });
-  // We suppose to be on inventory list page
-  if ($("select[name=skladisce]").length == 1 && $("input#articleId").length == 1) {
-    addCopyButton();
-  }
-  $("body").on("click", ".copyCodeNumber", function(e){
-    e.preventDefault();
-    var code = $(e.target).parent().find("a").text();
-    var $temp = $("<input>");
-    $("body").append($temp);
-    $temp.val(code).select();
-    document.execCommand("copy");
-    $temp.remove();
-  });
-  $("body").on("DOMNodeInserted", ".DialogBox .DialogBoxContent", function(el){
-    // Checking if hidden input field exists which determens popup is a Serial
-    // number popup.
-    if (!$(el.target).prop('id').length) {
-      if ($(el.target).parents('form').has('input[value=ajaxPostUpdateItemSerialNumbers]').length) {
-        // Add class for styling.
-        $(el.currentTarget).parents('.DialogBox').addClass('serialParser');
-        // Inject HTML in to DOM.
-        $(el.currentTarget).append('<div id="serialParserWrapper"><div><h3>Serial Parser</h3></div><div><button name="go">Go</button><button name="clear">Clear Current Serials</button><button name="cleartextarea">Clear Text Below</button></div><textarea></textarea><div id="serialParserHelp"><div class="serialParserHelpTitle">How to use?</div><div class="serialParserHelpBody">Paste or type (and press Go) in serial numbers seperated by comma or any whitespace (tab, newline, space) and they will be parsed and filled in into text fields on the left as expected. You can also enter sequental serials as such "ABC001-ABC010" and parser will fill them in as expected. Just make sure, Starting serial has the same total length as end and there can only be one - (dash) in total.</div></div></div>');
-      }
-    }
-  });
-  // Listener when user clicks on help text.
-  $("body").on('click', "#serialParserHelp .serialParserHelpTitle", function(event){
-    $('#serialParserHelp .serialParserHelpBody').toggle();
-  });
-  // Listener when user clicks a button to clear a textarea.
-  $("body").on('click', ".DialogBox .DialogBoxContent button[name=cleartextarea]", function(event){
-    event.preventDefault();
-    $('textarea', $(event.target).parents('#serialParserWrapper')).val('');
-  });
-  // Listener when user clicks OK to submit serial numbers to the server.
-  $("body").on('click', "input[name=BUTTON_ajaxPostUpdateItemSerialNumbers]", function(event){
-    var inputValues = Array.from($('input[type=text]', $(event.target).closest('form')).serializeArray(), x => x.value).filter(x => x.length);
-    var duplicateSerials = getNonUniqueElements(inputValues);
-    if (duplicateSerials !== false) {
-      // TODO: Try to stop other events from firing.
-      alert('Following serials are entered mutiple times: ' + duplicateSerials.join(", "));
-    }
-  });
-  // Listener when user clicks a Go button to parse the serials.
-  $("body").on('click', ".DialogBox .DialogBoxContent div#serialParserWrapper button[name=go]", function(event){
-    event.preventDefault();
-    fillSerials($('textarea', $(event.target).parents('#serialParserWrapper')).val(), $(event.target).closest('form'));
-  });
-  // Listener when user pastes text in to textarea.
-  $("body").on('paste', ".DialogBox .DialogBoxContent div#serialParserWrapper textarea", function(event){
-    fillSerials(event.originalEvent.clipboardData.getData('text'), $(event.target).closest('form'));
-  });
-  // Listener when user clicks to clear all current serial numbers entered.
-  $("body").on('click', ".DialogBox .DialogBoxContent button[name=clear]", function(event){
-    event.preventDefault();
-    $('table input[type=text]', $(event.target).closest("form")).val('');
-  });
-
-  if ($("#main-content #header-text span").length && $("#main-content #header-text span").first().text() == "Šifra artikla") {
-    product_code_span = $("#main-content #header-text span").next();
-    var product_code = product_code_span.text();
-    addProductInfoFromWeb(product_code);
-    product_code_span.html('<input type="text" value="' + product_code + '" readonly/>');
-  }
-
-  /**
-   * When modal for creating new Product is opened, this code automatically sets
-   * shop visibility to "visible online", so all newly created items will have this
-   * option seleted.
-   */
-  // Create a new MutationObserver instance
-  const observer = new MutationObserver((mutationsList) => {
-    // Check each mutation for added nodes
-    for (const mutation of mutationsList) {
-      if (mutation.type === 'childList') {
-        // Check if any added node matches the target ID
-        const addedNodes = Array.from(mutation.addedNodes);
-        const targetNode = addedNodes.find((node) => node.id === 'articleCreate');
-        // If the target node is found, execute your code here
-        if (targetNode) {
-          if (!$("#articleCreate input[name=sifraArtikla]").val()) {
-            // Select "visible online".
-            $("#onlineShopVisibility_div select").val("visibleOnline");
-            // Izberi "kos" kot enoto.
-            $("#articleCreate input[name=enotaMereString]").val("kos");
-            $("#articleCreate input[name=enotaMere]").val(2);
-          }
-          // Forces the SKU to only allows letters, numbers and "- / _ #"
-          $("#articleCreate input[name=sifraArtikla]").on("input", function() {
-            // Get the current value of the input
-            var inputValue = $(this).val();
-        
-            // Remove any characters that are not allowed
-            var updatedValue = inputValue.replace(/[^A-Za-z0-9\-/_#]/g, '');
-        
-            // Update the input with the cleaned value
-            $(this).val(updatedValue);
-          });
+    $("body").on("click", ".copyCodeNumber", function(e){
+      e.preventDefault();
+      var code = $(e.target).parent().find("a").text();
+      var $temp = $("<input>");
+      $("body").append($temp);
+      $temp.val(code).select();
+      document.execCommand("copy");
+      $temp.remove();
+    });
+    $("body").on("DOMNodeInserted", ".DialogBox .DialogBoxContent", function(el){
+      // Checking if hidden input field exists which determens popup is a Serial
+      // number popup.
+      if (!$(el.target).prop('id').length) {
+        if ($(el.target).parents('form').has('input[value=ajaxPostUpdateItemSerialNumbers]').length) {
+          // Add class for styling.
+          $(el.currentTarget).parents('.DialogBox').addClass('serialParser');
+          // Inject HTML in to DOM.
+          $(el.currentTarget).append('<div id="serialParserWrapper"><div><h3>Serial Parser</h3></div><div><button name="go">Go</button><button name="clear">Clear Current Serials</button><button name="cleartextarea">Clear Text Below</button></div><textarea></textarea><div id="serialParserHelp"><div class="serialParserHelpTitle">How to use?</div><div class="serialParserHelpBody">Paste or type (and press Go) in serial numbers seperated by comma or any whitespace (tab, newline, space) and they will be parsed and filled in into text fields on the left as expected. You can also enter sequental serials as such "ABC001-ABC010" and parser will fill them in as expected. Just make sure, Starting serial has the same total length as end and there can only be one - (dash) in total.</div></div></div>');
         }
       }
+    });
+    // Listener when user clicks on help text.
+    $("body").on('click', "#serialParserHelp .serialParserHelpTitle", function(event){
+      $('#serialParserHelp .serialParserHelpBody').toggle();
+    });
+    // Listener when user clicks a button to clear a textarea.
+    $("body").on('click', ".DialogBox .DialogBoxContent button[name=cleartextarea]", function(event){
+      event.preventDefault();
+      $('textarea', $(event.target).parents('#serialParserWrapper')).val('');
+    });
+    // Listener when user clicks OK to submit serial numbers to the server.
+    $("body").on('click', "input[name=BUTTON_ajaxPostUpdateItemSerialNumbers]", function(event){
+      var inputValues = Array.from($('input[type=text]', $(event.target).closest('form')).serializeArray(), x => x.value).filter(x => x.length);
+      var duplicateSerials = getNonUniqueElements(inputValues);
+      if (duplicateSerials !== false) {
+        // TODO: Try to stop other events from firing.
+        alert('Following serials are entered mutiple times: ' + duplicateSerials.join(", "));
+      }
+    });
+    // Listener when user clicks a Go button to parse the serials.
+    $("body").on('click', ".DialogBox .DialogBoxContent div#serialParserWrapper button[name=go]", function(event){
+      event.preventDefault();
+      fillSerials($('textarea', $(event.target).parents('#serialParserWrapper')).val(), $(event.target).closest('form'));
+    });
+    // Listener when user pastes text in to textarea.
+    $("body").on('paste', ".DialogBox .DialogBoxContent div#serialParserWrapper textarea", function(event){
+      fillSerials(event.originalEvent.clipboardData.getData('text'), $(event.target).closest('form'));
+    });
+    // Listener when user clicks to clear all current serial numbers entered.
+    $("body").on('click', ".DialogBox .DialogBoxContent button[name=clear]", function(event){
+      event.preventDefault();
+      $('table input[type=text]', $(event.target).closest("form")).val('');
+    });
+
+    if ($("#main-content #header-text span").length && $("#main-content #header-text span").first().text() == "Šifra artikla") {
+      product_code_span = $("#main-content #header-text span").next();
+      var product_code = product_code_span.text();
+      addProductInfoFromWeb(product_code);
+      product_code_span.html('<input type="text" value="' + product_code + '" readonly/>');
     }
-  });
 
-  // Start observing the body element for changes
-  observer.observe(document.body, { childList: true, subtree: true });
+    /**
+     * When modal for creating new Product is opened, this code automatically sets
+     * shop visibility to "visible online", so all newly created items will have this
+     * option seleted.
+     */
+    // Create a new MutationObserver instance
+    const observer = new MutationObserver((mutationsList) => {
+      // Check each mutation for added nodes
+      for (const mutation of mutationsList) {
+        if (mutation.type === 'childList') {
+          // Check if any added node matches the target ID
+          const addedNodes = Array.from(mutation.addedNodes);
+          const targetNode = addedNodes.find((node) => node.id === 'articleCreate');
+          // If the target node is found, execute your code here
+          if (targetNode) {
+            if (!$("#articleCreate input[name=sifraArtikla]").val()) {
+              // Select "visible online".
+              $("#onlineShopVisibility_div select").val("visibleOnline");
+              // Izberi "kos" kot enoto.
+              $("#articleCreate input[name=enotaMereString]").val("kos");
+              $("#articleCreate input[name=enotaMere]").val(2);
+            }
+            // Forces the SKU to only allows letters, numbers and "- / _ # . ,"
+            $("#articleCreate input[name=sifraArtikla]").on("input", function() {
+              // Get the current value of the input
+              var inputValue = $(this).val();
+          
+              // Remove any characters that are not allowed
+              var updatedValue = inputValue.replace(/[^A-Za-z0-9\-/_#.,]/g, '');
+          
+              // Update the input with the cleaned value
+              $(this).val(updatedValue);
+            });
+          }
+        }
+      }
+    });
 
+    // Start observing the body element for changes
+    observer.observe(document.body, { childList: true, subtree: true });
+  }
 });
 
 /**
