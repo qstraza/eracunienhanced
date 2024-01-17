@@ -2,7 +2,7 @@
     "name": "E-Racuni.com Enhanced",
     "short_name": "eracuni enhanced",
     "description": "Enhancements for e-racuni.com",
-    "version": "0.16",
+    "version": "0.19",
     "author": "Rok Avbar (qstraza)",
     "icons": {
         "16": "icon.png"

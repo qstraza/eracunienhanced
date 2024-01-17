@@ -2,16 +2,37 @@
  * Author: Rok Avbar, qstraza, rok@rojal.si
  * Date: 19.1.2018
  */
- var proxyurl;
  var companies = [
   'ROJAL NOVO MESTO, d.o.o.',
-  'RTI ARMS, proizvodnja in trgovina, d.o.o.'
+  'RTI TECHNOLOGIES d.o.o.'
  ];
  
 $( document ).ready(function() {
-  var currentCompany = $("#currentMandant", top.document).text();
+  var currentCompany = "";
+  try {
+    currentCompany = JSON.parse(sessionStorage.getItem('erUserSession_SIUser'))[2];
+  }
+  catch(e){};
+  
   if (companies.includes(currentCompany)) {
-    var mainIframe = $("#mainContentFrame");
+    
+
+    $("#mainContentFrame").on('load', function(){
+      var mainIframe = window.top.frames["mainContentFrame"].document;
+      var pageTitle = $("#toolbarTitle", mainIframe).text();
+      if (pageTitle.startsWith('Naročilo kupca')) {
+        var match = pageTitle.match(/ (\d+)$/);
+        if (match instanceof Array && match.length == 2) {
+          let order_id = match[1]
+          chrome.storage.sync.get('websiteurl', function(data) {
+            let order_edit_url = data.websiteurl + "/wp-admin/post.php?post=" + order_id + "&action=edit";
+            $("#edDiv_inlineEditSalesOrderStatus", mainIframe).parent().append("<br/><font class='dgLb'><a href='"+ order_edit_url +"' target='_blank'>Odpri naročilo<a></font>")
+          });
+          
+        }
+      }
+    });
+
     // Checking if user clicked on create/edit item.
     $("body").on("DOMNodeInserted", "#articleCreate", function(el){
       if ($("input[name=sifraArtikla]", el.target).length && $("input[name=crtnaKoda]", el.target).length == 1) {
@@ -30,13 +51,17 @@ $( document ).ready(function() {
     $("body").on("DOMNodeInserted", "#vTContainer table", function(el){
       if ($("select[name=skladisce]").length == 1 && $("input#articleId").length == 1) {
         addCopyButton();
-        checkIfOnWebPage(getAllCodes());
+        // checkIfOnWebPage(getAllCodes());
       }
     });
     // We suppose to be on inventory list page
     if ($("select[name=skladisce]").length == 1 && $("input#articleId").length == 1) {
       addCopyButton();
     }
+    $("body").on("click", "#tb_edit", function (e){
+      console.log(e);
+    });
+
     $("body").on("click", ".copyCodeNumber", function(e){
       e.preventDefault();
       var code = $(e.target).parent().find("a").text();
@@ -95,9 +120,96 @@ $( document ).ready(function() {
       product_code_span = $("#main-content #header-text span").next();
       var product_code = product_code_span.text();
       addProductInfoFromWeb(product_code);
-      product_code_span.html('<input type="text" value="' + product_code + '" readonly/>');
+      product_code_span.html('<input id="sifra_artikla" type="text" value="' + product_code + '" readonly/>');
     }
+    $("#sifra_artikla").on("click", function(){
+      $(this).select();
+      document.execCommand('copy');
+    });
 
+    $("<a href='javascript:;' id='goldekspres' ><img src='https://gold-ekspres.si/img/ge-logo.png' height='18' /></a>").insertAfter("#tb_stickyNotes");
+
+    // Create the modal structure with HTML and style it with CSS
+    const modalHTML = `
+    <div id="goldModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 999; justify-content: center; align-items: center;">
+        <div style="background-color: white; padding: 20px; border-radius: 5px; width: 300px;
+        margin-left: auto;
+        margin-right: auto;
+        margin-top: 50px;">
+            <h2>Gold Ekspres</h2>
+            <form id="goldModalForm">
+                <label for="goldObcutljivo">Občutljivo</label>
+                <input type="checkbox" id="goldObcutljivo" value="1"><br>
+
+                <label for="goldStPaketov">Število paketov</label>
+                <input type="number" min="1" max="30" id="goldStPaketov" value="1"><br>
+
+                <label for="goldOpomba">Opomba</label>
+                <textarea id="goldOpomba"></textarea><br>
+
+                <button type="button" class="confirmButton">Confirm</button>
+                <button type="button" class="cancelButton">Cancel</button>
+            </form>
+        </div>
+    </div>
+`;
+    // Append the modal to the body
+    $("body").append(modalHTML);
+    // Open the modal when the "Open Modal" link is clicked
+    $("#goldekspres").click(function() {
+        $("#goldModal").css("display", "block");
+    });
+
+    // Close the modal when the "Cancel" button is clicked
+    $("#goldModal .cancelButton").click(function() {
+        $("#goldModal").css("display", "none");
+    });
+
+    $("#goldModal .confirmButton").click(function() {
+        // Get values from the form
+        const obcutljivo = $("#goldObcutljivo").prop("checked") ? 1 : 0;
+        const stPaketov = $("#goldStPaketov").val();
+        const opombe = $("#goldOpomba").val();
+
+        var title = $("#toolbarTitle").text().split("št.");
+        if (!title) return false;
+        if (title.length != 2) return false;
+        if (title[0].trim() == 'Naročilo kupca') {
+          var tipDokumenta = 'narocilo';
+        }
+        else if (title[0].trim() == 'Račun') {
+          var tipDokumenta = 'racun';
+        }
+        else {
+          return false;
+        }
+        var dokument = title[1].trim()
+
+        // Send an AJAX request (dummy URL, replace with your actual endpoint)
+        $.ajax({
+            url: "https://www.rojal.si/eracuni/index.php/gold/dodajPosiljko/" + tipDokumenta + "/" + dokument,
+            type: "POST",
+            data: {
+                obcutljivo: obcutljivo,
+                stevilopaketov: stPaketov,
+                opombe: opombe
+            },
+            success: function(response) {
+                // Display the AJAX response in an alert
+                if (response.status == 1) {
+                  alert("Nalepka je ustvarjena");
+                }
+                else {
+                  alert("Napaka: " + response.msg);
+                }
+                // console.log(response);
+            }
+        });
+
+        // Close the modal
+        $("#goldModal").css("display", "none");
+    });
+    
     /**
      * When modal for creating new Product is opened, this code automatically sets
      * shop visibility to "visible online", so all newly created items will have this
@@ -224,6 +336,7 @@ function fillSerials(textareaValue, $form) {
   // Going thru parsed serial numbers and fill the inputs.
   for (var i = 0; i < serials.length; i++) {
     var $input = $('input[name=serijskaStevilka_' + (i+1) + ']', $form);
+    // var $input = $('input[name=sn_' + (i+1) + ']', $form);
     if ($input.length) {
       $input.val(serials[i]);
     }
@@ -320,15 +433,24 @@ function createBarCodeButton(element) {
 
 function addProductInfoFromWeb(product_code) {
   homeElement = $("#sidebar div.header > a");
-  chrome.storage.sync.get('apiurl', function(data) {
-    $.get(data.apiurl + product_code, function(data){
-      if (data) {
-        var productInfoContainer;
-        productInfoContainer = productInfoContainerTemplate.replace(/%URL%/, data.link.details);
-        productInfoContainer = productInfoContainer.replace(/%ID%/, data.item_id);
-        productInfoContainer = productInfoContainer.replace(/%TITLE%/, data.item_name);
-        productInfoContainer = productInfoContainer.replace(/%PRICE%/, data.price.default.your.price_format);
-        productInfoContainer = productInfoContainer.replace(/%IMG%/, data.images[0].name);
+  chrome.storage.sync.get(['websiteurl', 'authtoken'], function(local_storage) {
+    var settings = {
+      "url": local_storage.websiteurl + "/wp-json/wc/v3/product-by-sku?sku=" + product_code,
+      "method": "GET",
+      "timeout": 0,
+      "headers": {
+        "Authorization": "Basic " + local_storage.authtoken
+      },
+    };
+    
+    $.ajax(settings).done(function (data) {
+      // console.log(response);
+      var productInfoContainer;
+        productInfoContainer = productInfoContainerTemplate.replace(/%URL%/, data.view_url);
+        productInfoContainer = productInfoContainer.replace(/%EDIT_URL%/, data.edit_url);
+        productInfoContainer = productInfoContainer.replace(/%TITLE%/, data.name);
+        productInfoContainer = productInfoContainer.replace(/%IMG%/, data.image_url);
+        productInfoContainer = productInfoContainer.replace(/%STATUS%/, data.status);
         if ($("#itemWebWrapper").length) {
           $("#itemWebWrapper").remove();
         }
@@ -341,32 +463,13 @@ function addProductInfoFromWeb(product_code) {
         if (data.item_stock == "1") {
           $("#itemWebWrapper input[name='item_onstock']").prop("checked", true);
         }
-      }
-      else {
-        $("#sidebar div.header").html("<div id='itemWebWrapper'><h2>Rojal.si Info</h2><div class='content'><h4>Izdelka s to šifro ni na spletni strani.</h4></div></div>");
-        $("#sidebar div.header").append(homeElement);
-      }
+      
+    })
+    .fail(function(jqXHR, textStatus, errorThrown) {
+      $("#sidebar div.header").html("<div id='itemWebWrapper'><h2>Rojal.si Info</h2><div class='content'><h4>Izdelka s to šifro ni na spletni strani.</h4></div></div>");
+      $("#sidebar div.header").append(homeElement);
     });
   });
-}
-
-function getItemStock(product_code){
-  return new Promise((resolve, reject) => {
-    $.ajax({
-      type: 'POST',
-      url: proxyurl,
-      data: {
-        productCodes: [product_code],
-        methodName: 'getArticleStock'
-      },
-      success: function(data){
-        resolve(JSON.parse(data));
-      },
-      error: function(error){
-        reject(error);
-      }
-    })
-  })
 }
 
 var productInfoContainerTemplate = "\
@@ -374,11 +477,9 @@ var productInfoContainerTemplate = "\
   <h2>Rojal.si Info</h2> \
   <div class='content'> \
     <h4><a target='_blank' href='%URL%'>%TITLE%</a></h4> \
-    <div><a target='_blank' href='https://www.rojal.si/admin/?group=items&section=edit&id=%ID%'>Edit</a></div> \
-    <div><span>Price: %PRICE%</span></div> \
-    <div><span>Published: </span><span><input type='checkbox' name='item_published' disabled='disabled'></span></div> \
-    <div><span>In Stock: </span><span><input type='checkbox' name='item_onstock' disabled='disabled'></span></div> \
-    <img src='https://www.rojal.si/images/products/260x200/%IMG%' /> \
+    <div><a target='_blank' href='%EDIT_URL%'>Edit</a></div> \
+    <div><span>%STATUS%</span></div> \
+    <img src='%IMG%' /> \
   </div> \
 </div> \
 ";
