@@ -49,13 +49,13 @@ $( document ).ready(function() {
     });
     // More rows are inserted via Ajax.
     $("body").on("DOMNodeInserted", "#vTContainer table", function(el){
-      if ($("select[name=skladisce]").length == 1 && $("input#articleId").length == 1) {
+      if ($("select[name=skladisce]").length == 1 && $("input[name=articleId]").length == 1) {
         addCopyButton();
         // checkIfOnWebPage(getAllCodes());
       }
     });
     // We suppose to be on inventory list page
-    if ($("select[name=skladisce]").length == 1 && $("input#articleId").length == 1) {
+    if ($("select[name=skladisce]").length == 1 && $("input[name=articleId]").length == 1) {
       addCopyButton();
     }
     $("body").on("click", "#tb_edit", function (e){
@@ -335,8 +335,8 @@ function fillSerials(textareaValue, $form) {
   var numberOfInputs = $('input[type=text]', $form).length;
   // Going thru parsed serial numbers and fill the inputs.
   for (var i = 0; i < serials.length; i++) {
-    var $input = $('input[name=serijskaStevilka_' + (i+1) + ']', $form);
-    // var $input = $('input[name=sn_' + (i+1) + ']', $form);
+    // var $input = $('input[name=serijskaStevilka_' + (i+1) + ']', $form);
+    var $input = $('input[name=sn_' + (i+1) + ']', $form);
     if ($input.length) {
       $input.val(serials[i]);
     }
