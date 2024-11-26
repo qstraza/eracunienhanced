@@ -13,7 +13,7 @@
   },
   "homepage": "https://github.com/qstraza/eracunienhanced#readme",
   "devDependencies": {
-    "chrome-webstore-upload-cli": "^1.0.0"
+    "chrome-webstore-upload-cli": "^2.2.0"
   },
   "scripts": {
     "release": "webstore upload --source=./ --auto-publish"
